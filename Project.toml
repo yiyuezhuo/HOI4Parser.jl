@@ -1,0 +1,4 @@
+name = "HOI4Parser"
+uuid = "49026d6d-92ec-4d5c-b24c-e12fb5097cd2"
+authors = ["yiyuezhuo <yiyuezhuo@gmail.com>"]
+version = "0.1.0"
