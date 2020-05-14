@@ -1,154 +1,94 @@
 
-@enum State init reading comment quoted
+function extract(ex)
+    return ex, nothing
+end
 
-"""
-Remove comment, split source to list of symbols.
-"""
-function split_word(s::String)
-    state = init
-    word_list = String[]
-    char_list = Char[]
-    for c in s
-        if state == init
-            if c == '#'
-                state = comment
-            elseif c in [' ', '\n', '\t', '\r']
-            elseif c == '"'
-                state = quoted
+function extract(ex::Expr)
+    #@show ex
+    if ex.head == :(=)
+        left = ex.args[1]
+        right = extract(ex.args[2])[1]
+        if right isa Symbol
+            right = String(right)
+        end
+        return left, right 
+    elseif (ex.head == :bracescat) | (ex.head == :braces) # {x=1 ; y=2} or {x=1}
+        res_dict = Dict()
+        res_vec = Any[]
+        
+        for sub_ex in ex.args
+            key, value = extract(sub_ex)
+            if key == nothing
+                continue
+            elseif value == nothing
+                push!(res_vec, key)
             else
-                push!(char_list, c)
-                state = reading
+                res_dict[key] = value
             end
-        elseif state == reading
-            if c == '#'
-                push!(word_list, join(char_list))
-                char_list = Char[]
-                state = comment
-            elseif c in [' ', '\n', '\t', '\r']
-                push!(word_list, join(char_list))
-                char_list = Char[]
-                state = init
-            elseif c == '}'
-                push!(word_list, join(char_list))
-                push!(word_list, "}")
-                char_list = Char[]
-                state = init
-            else
-                push!(char_list, c)
-            end
-        elseif state == comment
-            if c == '\n'
-                state = init
-            end
-        elseif state == quoted
-            if c == '"'
-                push!(word_list, join(char_list))
-                char_list = Char[]
-                state = init
-            else
-                push!(char_list, c)
-            end
-        end     
-    end
-
-    if state == reading
-        push!(word_list, join(char_list))
-    end
-    return word_list
-end
-
-struct AssignExpr
-    left_value::Any
-    right_value::Any
-end
-
-struct Tree
-    stack::Vector{Union{String, AssignExpr, Tree}}
-end
-Tree() = Tree(Union{String, AssignExpr, Tree}[])
-
-# Base.pop!(tree::Tree) = pop!(tree.stack)
-# Base.push!(tree::Tree, el::Union{String, AssignExpr}) = push!(tree.stack, el)
-function add!(tree::Tree, el::Union{String, AssignExpr, Tree})
-    if length(tree.stack) > 0 && tree.stack[end] == "="
-        pop!(tree.stack) # remove "="
-        left_value = pop!(tree.stack)
-        push!(tree.stack, AssignExpr(left_value, el))
-    else
-        push!(tree.stack, el)
-    end
-end
-
-
-"""
-Rearrange word_list and return last accessed point 
-"""
-function build_tree(word_list::Vector{String}, idx::Int)
-    tree = Tree()
-    while idx <= length(word_list)
-        word = word_list[idx]
-        if word == "{"
-            sub_tree, idx = build_tree(word_list, idx+1)
-            add!(tree, sub_tree)
-        elseif word == "}"
-            return tree, idx
+        end
+        
+        if (length(res_dict) > 0) & (length(res_vec) == 0)
+            return res_dict, nothing
+        elseif (length(res_dict) == 0) & (length(res_vec) > 0)
+            return res_vec, nothing
+            #return convert(Vector{typeof(res_vec[1])}, res_vec), nothing
+        elseif (length(res_dict) == 0) & (length(res_vec) == 0) # {}
+            return res_vec, nothing
+            #return nothing, nothing
         else
-            add!(tree, word)
+            println("ambiguous ex: $ex \n res_dict: $res_dict \n res_vec: $res_vec")
+            return nothing, nothing
         end
-        idx += 1
-    end
-    return tree, idx
-end
-
-build_tree(word_list::Vector{String}) = build_tree(word_list, 1)[1]
-
-function format(tree::Tree, space::Int)
-    println("")
-    for el in tree.stack
-        print(" " ^ space)
-        format(el, space+1)
-        println("")
-    end
-end
-
-format(s::String, space::Int) = print(s)
-
-function format(ex::AssignExpr, space::Int)
-    format(ex.left_value, space)
-    print(" = ")
-    format(ex.right_value, space)
-end
-
-format(el) = format(el, 0)
-
-function extract(tree::Tree)
-    is_dict = false
-    el_list = Any[]
-    for el in tree.stack
-        if el isa AssignExpr
-            is_dict = true
+    elseif ex.head == :row
+        res_vec = Any[]
+        for sub_ex in ex.args
+            push!(res_vec, extract(sub_ex)[1])
         end
-        push!(el_list, extract(el))
+        return res_vec, nothing
+    elseif ex.head == :call # suppress operation such as <, >, <=, >=
+        return nothing, nothing
+    else
+        println("Unresolved expression: $ex")
+        return nothing, nothing
     end
-    if is_dict
-        res = Dict{Symbol, Any}()
-        for (key, value) in el_list
-            res[Symbol(key)] = value
-        end
-        return res
-    end
-    return el_list
 end
 
-function extract(s::String)
-    if s == "yes"
+function type_adapt(::Type{Bool}, value::String)
+    if value == "yes"
         return true
-    elseif s == "no"
+    elseif value == "no"
         return false
-    elseif tryparse(Float64, s) !== nothing
-        return parse(Float64, s)
+    else
+        error("Try to convert unknown value $value to Bool")
     end
-    return s
 end
 
-extract(s::AssignExpr) = (extract(s.left_value), extract(s.right_value))
+#type_adapt(::Type{String}, value::Symbol) = String(value)
+
+function type_adapt(::Type{Vector{String}}, value::Vector)
+    if length(value) == 0
+        return String[]
+    elseif typeof(value[1]) <: Vector
+        return String.(value[1])
+    else
+        return string.(value)
+    end
+end
+
+# type_adapt(::Type{Vector{String}}, value::Vector{Vector}) = String.(value[1])
+
+# type_adapt(::Type{Union{String, Vector{String}}}, value::Symbol) = String(value)
+type_adapt(::Type{Union{String, Vector{String}}}, value::Vector) = type_adapt(Vector{String}, value)
+# type_adapt(::Type{Union{Dict, String}}, value::Symbol) = String(value)
+
+type_adapt(::Any, value) = value
+
+function adapt(type::Type, dict::Dict)
+    dict = copy(dict)
+    for (name, typ) in zip(fieldnames(type), fieldtypes(type))
+        if name in keys(dict)
+            dict[name] = type_adapt(typ, dict[name])
+        end
+    end
+    return dict
+end
