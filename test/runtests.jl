@@ -2,7 +2,7 @@
 using Test
 using JSON
 @time using HOI4Parser
-using HOI4Parser: extract, SubUnit, Equipment, adapt, type_adapt
+using HOI4Parser: extract, SubUnit, Equipment, adapt, type_adapt, get_unit_equip, LandUnit
 
 root_unit = "common/units"
 root_equip = "common/units/equipment"
@@ -39,15 +39,6 @@ for (name, s) in equip_f_dict
     equip_ast_dict[name] = Meta.parse(s |> strip)
 end 
 
-for (name, s) in unit_f_dict
-    # println(name)
-    unit_ast_dict[name] = Meta.parse(s |> strip)
-end
-
-for (name, s) in equip_f_dict
-    # println(name)
-    equip_ast_dict[name] = Meta.parse(s |> strip)
-end 
 
 unit_extracted_dict = Dict{String, Dict}()
 equip_extracted_dict = Dict{String, Dict}()
@@ -111,3 +102,12 @@ unit_dict[:infantry] |> dump
 
 json(equip_dict[:infantry_equipment_0], 2) |> println
 json(unit_dict[:infantry], 2) |> println
+
+loaded = get_unit_equip(root_unit)
+
+unit_dict = loaded.unit_dict
+equip_dict = loaded.equip_dict
+
+infantry = LandUnit(unit_dict[:infantry], equip_dict[:infantry_equipment_0])
+
+dump(infantry)

@@ -2,3 +2,6 @@ name = "HOI4Parser"
 uuid = "49026d6d-92ec-4d5c-b24c-e12fb5097cd2"
 authors = ["yiyuezhuo <yiyuezhuo@gmail.com>"]
 version = "0.1.0"
+
+[deps]
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"

@@ -107,8 +107,8 @@
 end
 
 function Equipment(type::Type, dict::Dict)
-    dict_adapted = adapt(Equipment, dict)
-    Equipment{type}(;dict_adapted...)
+    #dict_adapted = adapt(Equipment, dict)
+    Equipment{type}(;dict...)
 end
 
 Equipment(dict::Dict) = Equipment(Float64, dict)

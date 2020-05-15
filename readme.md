@@ -1,0 +1,1 @@
+![HOI4Parser](https://github.com/yiyuezhuo/HOI4Parser.jl/workflows/HOI4Parser/badge.svg)
