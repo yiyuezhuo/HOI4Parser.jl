@@ -7,8 +7,10 @@ include("common.jl")
 include("units.jl")
 include("equipment.jl")
 include("land_units.jl")
+include("divisions.jl")
+
 include("io.jl")
 
-greet() = print("Hello World!")
+#greet() = print("Hello World!")
 
 end # module

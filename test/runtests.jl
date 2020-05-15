@@ -2,7 +2,7 @@
 using Test
 using JSON
 @time using HOI4Parser
-using HOI4Parser: extract, SubUnit, Equipment, adapt, type_adapt, get_unit_equip, LandUnit
+using HOI4Parser: extract, SubUnit, Equipment, adapt, type_adapt, get_unit_equip, LandUnit, DivisionTemplate, Division
 
 root_unit = "common/units"
 root_equip = "common/units/equipment"
@@ -109,5 +109,18 @@ unit_dict = loaded.unit_dict
 equip_dict = loaded.equip_dict
 
 infantry = LandUnit(unit_dict[:infantry], equip_dict[:infantry_equipment_0])
+artillery = LandUnit(unit_dict[:artillery], equip_dict[:artillery_equipment_1]) # support
+artillery_brigade = LandUnit(unit_dict[:artillery_brigade], equip_dict[:artillery_equipment_1])
 
 dump(infantry)
+artillery |> dump
+artillery_brigade |> dump
+
+inf7art2 = DivisionTemplate((infantry, 7), (artillery_brigade, 2))
+inf5sup_art1 = DivisionTemplate([infantry, infantry, infantry, infantry, infantry, artillery])
+
+div1 = Division(inf5sup_art1)
+div2 = Division(inf7art2)
+
+println(div1)
+println(div2)
